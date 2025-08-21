@@ -1,0 +1,10 @@
+t = Turtle()
+colors = ['#00ff00', '#0000ff', '#ff0000', '#ff0']
+for i in range(1000):
+    t.pc(colors[i%4])
+    t.fd(i)
+    t.right(89)
+    t.circle(100)
+
+
+# you have to setup interacitivty of canvas!

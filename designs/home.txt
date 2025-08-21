@@ -1,0 +1,4 @@
+[brand, btns(about, docs, sign up, login)]
+[hero]
+[features]
+[footer]
