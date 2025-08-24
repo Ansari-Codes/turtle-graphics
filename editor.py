@@ -183,7 +183,6 @@ for i in range(100):
             task.cancel()
         logs.push('\n'+f"<b>[{datetime.now().strftime('%H:%M:%S')}] Stopped</b><br>"+'\n')
         run_btn.enable()
-        stop_btn.disable()
         
     async def run_code():
         client = ui.context.client
@@ -192,7 +191,6 @@ for i in range(100):
             return
         client.running = True
         client.task = asyncio.current_task()
-        stop_btn.enable()
         run_btn.disable()
         clear_btn.disable()
         try:
@@ -282,23 +280,21 @@ for i in range(100):
             client.running = False
             client.task = None
             run_btn.enable()
-            stop_btn.disable()
             clear_btn.enable()
             logs.push(f"""\n<b>[{datetime.now().strftime('%H:%M:%S')}] RAN!</b><br>""")    
     with ui.row():
         with ui.row().classes('w-full flex-wrap'):
             run_btn = ui.button().props('push icon=play_arrow color=positive') \
                 .classes('w-full sm:flex-1 sm:w-1/3')
-            
-            stop_btn = ui.button().props('push icon=stop color=negative') \
-                .classes('w-full sm:flex-1 sm:w-1/3')
             clear_btn = ui.button(
                 on_click=lambda: clear_screen(canvas)
             ).props('push icon=layers_clear color=warning') \
                 .classes('w-full sm:flex-1 sm:w-1/3')
+            export_button = ui.button(
+                on_click=export_canvas
+            ).props('push icon=image color=info') \
+                .classes('w-full sm:flex-1 sm:w-1/3')
     run_btn.on('click', run_code)
-    stop_btn.on('click', stop_running)
-    stop_btn.disable()
 
 async def get_projects(limit=5):
     username = app.storage.user.get('username')
@@ -567,6 +563,53 @@ def save(code, labels):
                 ui.button('Save').on_click(change_title).props('color=positive')
     return dg
 
+async def publish(code):
+    user = app.storage.user.get('username')
+    pid = getattr(ui.context.client, 'pid', None)
+    async def _pub():
+        spinner = ui.notification('Publishing', 
+            spinner=True,
+            timeout=100) 
+        db = await get_db_conn()
+        try:
+            img_src = await ui.run_javascript('''
+                const canvas = document.getElementById('turtle-canvas');
+                if (canvas) {
+                    return canvas.toDataURL('image/png');
+                }
+                return null;
+            ''', timeout=3600)
+        except:
+            img_src = ''
+        try:
+            await db.execute('''
+                UPDATE projects
+                SET username = $1,
+                    code_data = $2,
+                    svg_data = $3,
+                    status = 'published',
+                    description = $4
+                WHERE title = $5
+            ''', 
+            user,
+            code().value, 
+            img_src,
+            desc.value, 
+            ui.context.client.pname
+        )
+            ui.notify("Published successfully!", type='positive')
+        except Exception as e:
+            ui.notify(f"Error: {e}", type='negative')
+        finally:
+            spinner.dismiss()
+    dialog = ui.dialog()
+    with dialog, ui.card():
+        desc = ui.textarea('Description', 
+                    placeholder='Your Description here...')
+        ui.button('Publish', on_click=_pub)
+        ui.button('Clear', on_click=lambda : dialog.close())
+    return dialog
+
 async def create_new(theme, style, props):
     ui.colors(**theme)
     dark = ui.dark_mode(app.storage.user.get('theme_dark', False))
@@ -600,7 +643,6 @@ async def create_new(theme, style, props):
         client.username = user
         if not hasattr(client, 'pname'):
             client.pname = uuid.uuid1().hex[:8]
-        
         setup_zoom_pan()
         add_canvas_interactivity()
     
@@ -612,14 +654,11 @@ async def create_new(theme, style, props):
     open_dialog = await create_dialogs(user = app.storage.user.get('username'),
                                 codearea=lambda: codearea1)
     save_dialog = save(lambda: codearea1, lambda: plabels)
+    pub_dalog = await publish(lambda : codearea1)
     ee.delete()
     with ui.header().classes('shadow-md').style(f'background: {primary}; color: white;'):
         with ui.row().classes('items-center justify-start w-full px-4 py-2 gap-4'):
             buttons = [
-                {"Settings": [
-                    ('Editor', 'edit', 'editor'),
-                    ('Theme', 'palette', 'toggle_theme'),
-                ]},
                 {"File": [
                     ('Load', 'photo_library', 'load'),
                     ('Save', 'save', 'save'),
@@ -654,6 +693,8 @@ async def create_new(theme, style, props):
                         btn.on_click(open_dialog.open)
                     elif action_id == 'save':
                         btn.on_click(handle_save)
+                    elif action_id == 'publish':
+                        btn.on_click(pub_dalog.open)
                     elif action_id == 'export_code':
                         btn.on_click(lambda: ui.download.content(codearea1.value, f'turtle-code-{uuid.uuid1().hex[:8]}.py'))
                     elif action_id == 'export_canvas':

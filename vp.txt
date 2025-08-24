@@ -7,4 +7,3 @@ for i in range(1000):
     t.circle(100)
 
 
-# you have to setup interacitivty of canvas!
