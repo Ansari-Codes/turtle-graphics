@@ -18,22 +18,22 @@ async def fetch_project_sections():
     conn = await get_db_conn()
     try:
         most_liked = await conn.fetch('''
-            SELECT id, title FROM projects
+            SELECT id, username, title FROM projects
             WHERE status = 'published'
             ORDER BY likes DESC LIMIT 15
         ''')
         most_pivoted = await conn.fetch('''
-            SELECT id, title FROM projects 
+            SELECT id, username, title FROM projects 
             WHERE status = 'published'
             ORDER BY pivot_count DESC LIMIT 15
         ''')
         most_remixed = await conn.fetch('''
-            SELECT id, title FROM projects 
+            SELECT id, username, title FROM projects 
             WHERE status = 'published'
             ORDER BY remix_count DESC LIMIT 15
         ''')
         random_projects = await conn.fetch('''
-            SELECT id, title FROM projects 
+            SELECT id, username, title FROM projects 
             WHERE status = 'published'
             ORDER BY RANDOM() LIMIT 15
         ''')
@@ -46,45 +46,22 @@ async def fetch_project_sections():
     finally:
         await conn.close()
 
-def create_search(id='search-bar', container=ui.column()):
+def create_search(container):
     async def handle_search(e=None):
         container.clear()
-        if not e:
-            sections = await fetch_project_sections()
-            container.clear()
-            with container:
-                for section, projects in sections.items():
-                        ui.label(section).classes('font-bold')
-                        with ui.row().classes('flex-wrap gap-2'):
-                            for proj in projects:
-                                with ui.card().classes('p-2'):
-                                    ui.label(proj['title'])
-        else:
-            data = await search_projects(e.value)
-            if data:
-                container.clear()
-                with container:
-                    with ui.grid().classes('grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4'):
+        sections = await fetch_project_sections()
+        container.clear()
+        with container:
+            for section in sections:
+                data = sections[section]
+                with ui.card().classes('w-full flex-col p-2 rounded-t-xl'):
+                    ui.label(section).classes('w-full text-xl bg-accent p-3 rounded-t-xl text-center ')
+                    with ui.row().classes('w-full overflow-x-auto flex-nowrap p-1'):
                         for proj in data:
                             with ui.card().classes('transition hover:shadow-lg hover:scale-[1.01]'):
                                 with ui.column().classes('p-4'):
                                     ui.label(proj['title']).classes('text-lg font-semibold')
                                     ui.label(f"👤 {proj['username']}").classes('text-sm text-gray-600')
-            else:
-                container.clear()
-                with container:
-                    ui.label('🔍 No results found.')
-
-    with ui.row().classes(f'{id} items-center mt-4 justify-center'):
-        with ui.row().classes('w-full sm:w-[60vw] items-center gap-2'):
-            search_input = ui.input(
-                placeholder='Search...',
-                on_change=lambda e: handle_search(e)
-            ).props('dense outlined').classes('flex-grow')
-
-            ui.button(icon='search', on_click=lambda: handle_search(search_input))\
-                .props('push color=primary')
-
     return handle_search
 
 def toggle_visibility():
@@ -198,5 +175,4 @@ async def create_home(theme, btn, props):
 
     with ui.column().classes('search-desktop flex-col-reverse items-center w-full'):
         ui.button('See more', on_click=lambda:ui.navigate.to('/browse')).props(props).style(btn).classes('w-[50%]')
-        row = ui.column()
-        await create_search('search-bar-desktop', row)()
+        await create_search(ui.column().classes('max-w-[80vw] sm:max-w-full'))()
