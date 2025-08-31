@@ -82,38 +82,20 @@ async def get_projects(limit=5, order_by="created_at"):
     return [dict(row) for row in rows]
 
 async def projector():
-    order_map = {
-        "Latest": ("created_at", True),
-        "Oldest": ("created_at", False),
-        "Most Likes": ("likes", True),
-        "Most Remixed": ("remix_count", True),
-        "Most Pivots": ("pivot_count", True)
-    }
-    
     with ui.row().classes('w-full flex-wrap gap-4 items-center'):
         ui.label('Projects').classes('text-2xl')
         ui.space()
-        selected_order = ui.select(
-            list(order_map.keys()), 
-            value="Latest", 
-            label="Sort by"
-        ).props('dense bordered')
         limit_input = ui.number(
-            label="Limit", 
-            value=5, 
+            label="Limit",
+            value=5,
             min=1,
-            max=20,
+            max=5,
             step=1
         ).props('dense bordered')
-    
     project_container = ui.scroll_area().classes("w-full h-[60vh] gap-4")
-    
     async def refresh_projects():
-        order_by, desc = order_map[str(selected_order.value)]
+        order_by = "created_at"
         projects = await get_projects(limit_input.value, order_by)
-        if not desc:
-            projects = list(reversed(projects))
-        
         project_container.clear()
         with project_container:
             for p in projects:
@@ -127,14 +109,12 @@ async def projector():
                         ui.badge(p['status']).props('color=primary')
                         ui.label(f"❤️ {p['likes']}")
                         ui.label(f"⬆️ {p['pivot_count']}")
-    
-    selected_order.on('change', lambda _: refresh_projects())
     limit_input.on('change', lambda _: refresh_projects())
     await refresh_projects()
     return project_container
 
 async def main():
-    projects_data = await get_projects(limit=1000)  # Get all projects for stats
+    projects_data = await get_projects(limit=10000)  # Get all projects for stats
     with ui.column().classes('w-full gap-6'):
         with ui.row().classes('flex flex-col md:flex-row w-full gap-6'):
             with ui.column().classes('w-full md:w-[40vw]'):
@@ -179,18 +159,46 @@ async def main():
                         bar_fig.update_layout(title='Likes per Project (Top 10)', margin=dict(l=20, r=20, t=40, b=20))
                         ui.plotly(bar_fig).classes('w-full h-[300px] sm:h-[350px] md:h-[400px]')
 
-async def projects_page(dialog, max_proj=30):
+async def projects_page(dialog, max_proj=3):
     all_projects = await get_projects(limit=1000)
-    total_projects = len(all_projects)
-    total_pages = max(1, (total_projects + max_proj - 1) // max_proj)
-    search_input = ui.input(placeholder='Search projects...',
-        on_change=lambda e: show_content(1, e.value)).classes('w-full mb-4')
+    # Use direct on_change param for all filters
+    def update_content(*_):
+        show_content(1, search_input.value, status_filter.value, order_filter.value) # type: ignore
+
+    with ui.row().classes('w-full items-center'):
+        search_input = ui.input(
+            placeholder='Search projects...',
+            on_change=lambda e: update_content()
+        ).classes('rounded text-sm').props('outlined dense')
+        with ui.button(icon='filter'):
+            with ui.menu().classes('w-full sm:w-[20vw] bg-green-100') as m:
+                status_filter = ui.select(
+                    ['All', 'Draft', 'Published'],
+                    value='All',
+                    label='Status',
+                    on_change=lambda e: update_content()
+                ).classes('mb-1 w-full')
+                order_filter = ui.select(
+                    ['Descending', 'Ascending'],
+                    value='Descending',
+                    label='Order',
+                    on_change=lambda e: update_content()
+                ).classes('mb-1 w-full')
     cont = ui.row().classes('w-full justify-start flex-wrap gap-4 mt-4')
     pagination_container = ui.row().classes('w-full justify-center mt-4')
-    def show_content(page, search_text=''):
+
+    def show_content(page, search_text='', status='All', order='Descending'):
         cont.clear()
         pagination_container.clear()
-        filtered = [p for p in all_projects if search_text.lower() in p['title'].lower()]
+        filtered = [
+            p for p in all_projects
+            if (search_text.lower() in p['title'].lower())
+            and (status == 'All' or p['status'].lower() == status.lower())
+        ]
+        if order == 'Ascending':
+            filtered = sorted(filtered, key=lambda x: x.get('created_at', ''), reverse=False)
+        else:
+            filtered = sorted(filtered, key=lambda x: x.get('created_at', ''), reverse=True)
         filtered_total = len(filtered)
         filtered_pages = max(1, (filtered_total + max_proj - 1) // max_proj)
         start = (page-1) * max_proj
@@ -215,13 +223,19 @@ async def projects_page(dialog, max_proj=30):
                     ui.button('View Project', on_click=lambda r=row: view_project(r, dialog)) \
                         .props('color=secondary outline rounded')
         with pagination_container:
-            ui.pagination(value=page, 
-                        min=1, 
-                        max=filtered_pages, 
-                        direction_links=True,
-                        on_change=lambda e: show_content(e.value, search_input.value)).classes('w-full')
-    show_content(1)
-    return cont
+            ui.pagination(
+                value=page,
+                min=1,
+                max=filtered_pages,
+                direction_links=True,
+                on_change=lambda e: show_content(
+                    e.value,
+                    search_input.value,
+                    status_filter.value, # type: ignore
+                    order_filter.value # type: ignore
+                )
+            ).classes('w-full')
+    show_content(1, '', 'All', 'Ascending')
 
 async def create_dashboard(theme, style, props, user):
     ui.colors(**theme)

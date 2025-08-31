@@ -208,25 +208,3 @@ class Turtle:
                 'end': 'rt'
             }
             attributes['anchor']
-            
-            
-            
-import cProfile
-import pstats
-
-def profile_turtle_code():
-    profiler = cProfile.Profile()
-    profiler.enable()
-
-    # --- Place your drawing code here ---
-    t = Turtle()
-    for i in range(1000):
-        t.fd(10)
-        t.lt(90)
-    # --- End drawing code ---
-
-    profiler.disable()
-    stats = pstats.Stats(profiler).sort_stats('cumtime')
-    stats.print_stats(20)  # Show top 20 slowest calls
-
-profile_turtle_code()

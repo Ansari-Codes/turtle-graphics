@@ -65,10 +65,10 @@ async def create_browse():
     await cb(theme, style, props)
     print("Loaded!")
 
-@ui.page('/{user}/dashboard/new')
-async def create_new(user: str):
+@ui.page('/{user}/dashboard/new/{proj_name}')
+async def create_new(user: str, proj_name: str):
     print(f"Loading dashboard/{user}/new")
-    await cn(theme, style, props)
+    await cn(theme, style, props, proj_name)
     print(f"Loaded dashboard/{user}/new")
 
 @ui.page('/{user}/dashboard/')

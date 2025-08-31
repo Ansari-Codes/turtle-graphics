@@ -47,50 +47,45 @@ async def fetch_project_sections():
         await conn.close()
 
 def create_search(id='search-bar', container=ui.column()):
-    async def search():
-        val = search_input.value
+    async def handle_search(e=None):
         container.clear()
-        if val:
-            data = await search_projects(val)
-            for cat in data:
+        if not e:
+            sections = await fetch_project_sections()
+            container.clear()
+            with container:
+                for section, projects in sections.items():
+                        ui.label(section).classes('font-bold')
+                        with ui.row().classes('flex-wrap gap-2'):
+                            for proj in projects:
+                                with ui.card().classes('p-2'):
+                                    ui.label(proj['title'])
+        else:
+            data = await search_projects(e.value)
+            if data:
+                container.clear()
                 with container:
-                    with ui.grid(columns=1).classes('grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4'):
-                        for cat in data:
+                    with ui.grid().classes('grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4'):
+                        for proj in data:
                             with ui.card().classes('transition hover:shadow-lg hover:scale-[1.01]'):
                                 with ui.column().classes('p-4'):
-                                    ui.label(cat['title']).classes('text-lg font-semibold')
-                                    ui.label(f"👤 {cat['username']}").classes('text-sm text-gray-600')
-        else:
-            sections = await fetch_project_sections()
-            for section, projects in sections.items():
+                                    ui.label(proj['title']).classes('text-lg font-semibold')
+                                    ui.label(f"👤 {proj['username']}").classes('text-sm text-gray-600')
+            else:
+                container.clear()
                 with container:
-                    with ui.card():
-                        with ui.column():
-                            ui.label(section).classes('font-bold')
-                            with ui.row():
-                                for proj in projects:
-                                    with ui.card_section():
-                                        ui.label(proj['title'])
+                    ui.label('🔍 No results found.')
+
     with ui.row().classes(f'{id} items-center mt-4 justify-center'):
-        with ui.row().classes(
-            'search-bar-container items-center gap-2 px-3 py-1 rounded-full bg-white dark:bg-gray-800'
-        ).style('border: 1px solid #ccc;').classes(
-            'w-full sm:w-[60vw]'
-        ):
-            ui.icon('search').classes('text-gray-500')
+        with ui.row().classes('w-full sm:w-[60vw] items-center gap-2'):
             search_input = ui.input(
-                placeholder='Search',
-                on_change=search
-            ).props('borderless dense input-style="color:black"')\
-                .classes('flex-grow')\
-            .style(
-                'background:transparent; outline:none; min-width:0;')
-            ui.button(icon='arrow_forward').props('flat round dense').classes('bg-primary text-white')\
-                .on('click', search)
-            with ui.button(icon='filter_list').props('flat round dense').classes('bg-primary text-white'):
-                with ui.menu():
-                    ui.radio(['Projects', 'Profile'], value='Projects')
-    return search
+                placeholder='Search...',
+                on_change=lambda e: handle_search(e)
+            ).props('dense outlined').classes('flex-grow')
+
+            ui.button(icon='search', on_click=lambda: handle_search(search_input))\
+                .props('push color=primary')
+
+    return handle_search
 
 def toggle_visibility():
     ui.run_javascript('''
@@ -175,22 +170,6 @@ async def create_home(theme, btn, props):
     await ui.context.client.connected(100)
     await asyncio.sleep(1)
     ee.delete()
-
-    # Custom styles
-    ui.add_head_html('''
-<style>
-.search-bar-container {
-    transition: all 0.3s ease-in-out;
-    width: 100%;
-    max-width: 440px;
-}
-.search-bar-container:focus-within {
-    box-shadow: 0 0 12px rgba(0, 123, 255, 0.3);
-    background-color: rgba(255,255,255,0.1);
-}
-</style>
-    ''')
-
     with ui.card().classes('w-full bg-[{light}] dark:bg-[{dark}]'.format(
     light=theme['secondary_false'],
     dark=theme['secondary_true']
