@@ -1,32 +1,36 @@
 from nicegui import ui
 
-@ui.page('/')
-async def _():
-    with ui.card():
-        ui.label("Emoji Picker:")
-        emoji_output = ui.label("Selected: ")
+with ui.card():
+    ui.label("Custom Emoji Picker:")
+    emoji_output = ui.label("Selected: ")
 
-        ui.add_head_html('''
-        <script src="https://cdn.jsdelivr.net/npm/emoji-mart@5.4.0/dist/browser.js"></script>
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emoji-mart@5.4.0/dist/browser.css"/>
-        <style>.emoji-picker { max-width: 350px; }</style>
-        ''')
+    # Load the UMD build instead of the ESM build
+    ui.add_head_html('''
+    <script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.4/dist/umd/emoji-button.min.js"></script>
+    ''')
 
-        picker = ui.html('''
-        <div id="picker" class="emoji-picker"></div>
-        ''')
-        await ui.run_javascript("""
-            <script>
-        const picker = new EmojiMart.Picker({ onEmojiSelect: e => {
-            const ev = new CustomEvent("emoji_selected", {detail: e.native});
+    # Button with stable ID
+    picker_btn = ui.button('Pick Emoji')
+    picker_btn._props['id'] = 'emoji-btn'
+
+    # JS handler: toggle emoji picker
+    js_code = """
+    const button = document.querySelector('#emoji-btn');
+    if (!window.myEmojiPicker) {
+        window.myEmojiPicker = new EmojiButton.EmojiButton();
+        window.myEmojiPicker.on('emoji', selection => {
+            const ev = new CustomEvent("emoji_selected", {detail: selection.emoji});
             document.dispatchEvent(ev);
-        }});
-        document.getElementById("picker").appendChild(picker);
-        </script>
-        """, timeout=100)
-        def on_emoji(e):
-            emoji_output.set_text(f"Selected: {e.args}")
+        });
+    }
+    window.myEmojiPicker.togglePicker(button);
+    """
+    picker_btn.on('click', js_handler=js_code)
 
-        ui.on('emoji_selected', on_emoji)
+    # Python-side listener
+    def on_emoji(e):
+        emoji_output.set_text(f"Selected: {e.args}")
 
-ui.run(port=8000)
+    ui.on('emoji_selected', on_emoji)
+
+ui.run(port=9000)
