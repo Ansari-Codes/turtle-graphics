@@ -20,7 +20,11 @@ class Turtle:
         self.pen_color = "black"
         self.pen_size = 1
         self.show_head = True
-
+        
+        # Track the farthest point from center
+        self.max_distance = 0
+        self.farthest_point = (0, 0)
+        
         # Aliases
         self.fd = self.forward
         self.bk = self.backward
@@ -37,17 +41,24 @@ class Turtle:
         self.st = self.show
         self.cs = self.clearscreen
         self.goto = self.sp
-
+        
         # Fill handling
         self._fill_stack = []
         self._fill_color = self.pen_color
         self._stop_flag = False
-
+        
+    def _update_farthest_point(self):
+        """Update the farthest point from center if current position is farther"""
+        distance = math.sqrt(self.x**2 + self.y**2)
+        if distance > self.max_distance:
+            self.max_distance = distance
+            self.farthest_point = (self.x, self.y)
+    
     def _to_physical(self, x, y):
         phys_x = ((self.width / 2) + x) * self.supersample
         phys_y = ((self.height / 2) - y) * self.supersample
         return phys_x, phys_y
-
+    
     def forward(self, dist):
         theta = math.radians(self.heading)
         new_x = self.x + dist * math.cos(theta)
@@ -62,60 +73,66 @@ class Turtle:
                 width=pen_width
             )
         self.x, self.y = new_x, new_y
+        self._update_farthest_point()  # Update farthest point
+        
         if self._fill_stack:
             self._fill_stack[-1]['path'].append((self.x, self.y))
-
+    
     def backward(self, dist):
         self.forward(-dist)
-
+    
     def left(self, angle):
         if angle: self.heading += angle
         return self.heading
-
+    
     def right(self, angle):
         if angle: self.heading -= angle
         return self.heading
-
+    
     def penup(self):
         self.pen_down = False
-
+    
     def pendown(self):
         self.pen_down = True
-
+    
     def isdown(self):
         return self.pen_down
-
+    
     def pencolor(self, clr=None):
         if clr is not None:
             self.pen_color = clr
         return self.pen_color
-
+    
     def fillcolor(self, clr=None):
         if clr is not None:
             self._fill_color = clr
         return self._fill_color
-
+    
     def pensize(self, sz=None):
         if sz is not None and sz >= 0:
             self.pen_size = sz
         return self.pen_size
-
+    
     def clearscreen(self):
         self.image = Image.new('RGBA', (self.width * self.supersample, self.height * self.supersample), (0, 0, 0, 0))
         self.draw = ImageDraw.Draw(self.image)
         self.x, self.y = 0, 0
         self.heading = 0
-
+        # Reset farthest point tracking
+        self.max_distance = 0
+        self.farthest_point = (0, 0)
+    
     def setpos(self, x, y):
         self.x, self.y = x, y
-
+        self._update_farthest_point()  # Update farthest point
+    
     def setheading(self, angle):
         self.heading = angle
-
+    
     def home(self):
         self.setpos(0, 0)
         self.setheading(0)
-
+    
     def circle(self, radius):
         if not radius:
             raise ValueError("circle(radius) requires a non-zero radius")
@@ -131,7 +148,16 @@ class Turtle:
             outline=self.pen_color,
             width=pen_width
         )
-
+        # Update farthest point (considering the circle's edge)
+        circle_edge_distance = abs(radius)
+        if circle_edge_distance > self.max_distance:
+            self.max_distance = circle_edge_distance
+            # The farthest point would be in the direction of the current heading
+            theta = math.radians(self.heading)
+            farthest_x = self.x + radius * math.cos(theta)
+            farthest_y = self.y + radius * math.sin(theta)
+            self.farthest_point = (farthest_x, farthest_y)
+    
     def dot(self, size=5):
         phys_x, phys_y = self._to_physical(self.x, self.y)
         phys_size = size * self.supersample
@@ -139,13 +165,14 @@ class Turtle:
             [phys_x - phys_size, phys_y - phys_size, phys_x + phys_size, phys_y + phys_size],
             fill=self.pen_color
         )
-
+        self._update_farthest_point()  # Update farthest point
+    
     def show(self):
         self.show_head = True
-
+    
     def hide(self):
         self.show_head = False
-
+    
     def begin_fill(self, layer=None):
         if layer is None:
             layer = len(self._fill_stack)
@@ -154,14 +181,20 @@ class Turtle:
             'path': [(self.x, self.y)],
             'layer': layer
         })
-
+    
     def end_fill(self):
         if self._fill_stack:
             fill = self._fill_stack.pop()
             if len(fill['path']) > 2:
                 phys_points = [self._to_physical(x, y) for x, y in fill['path']]
                 self.draw.polygon(phys_points, fill=fill['color'])
-
+                # Check all points in the fill path for farthest point
+                for x, y in fill['path']:
+                    distance = math.sqrt(x**2 + y**2)
+                    if distance > self.max_distance:
+                        self.max_distance = distance
+                        self.farthest_point = (x, y)
+    
     @contextmanager
     def filling(self, color=None, layer=None):
         if color:
@@ -171,10 +204,10 @@ class Turtle:
             yield
         finally:
             self.end_fill()
-
+    
     def stop(self):
         self._stop_flag = True
-
+    
     def _get_image_data(self):
         buffer = io.BytesIO()
         # Downscale for anti-aliasing
@@ -184,8 +217,10 @@ class Turtle:
             final_image = self.image
         final_image.save(buffer, format="PNG")
         img_str = base64.b64encode(buffer.getvalue()).decode('utf-8')
-        return f"data:image/png;base64,{img_str}"
-
+        
+        # Return both the image data and the farthest point dimensions
+        return f"data:image/png;base64,{img_str}", (abs(self.farthest_point[0]), abs(self.farthest_point[1]))
+    
     def write(self, text='', **kwargs):
         phys_x, phys_y = self._to_physical(self.x, self.y)
         text = str(text)
@@ -207,4 +242,7 @@ class Turtle:
                 'middle': 'mt',
                 'end': 'rt'
             }
-            attributes['anchor']
+            attributes['anchor'] = anchor_map.get(kwargs['text_anchor'], 'lt')
+        
+        self.draw.text(**attributes)
+        self._update_farthest_point()  # Update farthest point

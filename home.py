@@ -18,29 +18,23 @@ async def fetch_project_sections():
     conn = await get_db_conn()
     try:
         most_liked = await conn.fetch('''
-            SELECT id, username, title FROM projects
+            SELECT * FROM projects
             WHERE status = 'published'
             ORDER BY likes DESC LIMIT 15
         ''')
         most_pivoted = await conn.fetch('''
-            SELECT id, username, title FROM projects 
+            SELECT * FROM projects 
             WHERE status = 'published'
             ORDER BY pivot_count DESC LIMIT 15
         ''')
-        most_remixed = await conn.fetch('''
-            SELECT id, username, title FROM projects 
-            WHERE status = 'published'
-            ORDER BY remix_count DESC LIMIT 15
-        ''')
         random_projects = await conn.fetch('''
-            SELECT id, username, title FROM projects 
+            SELECT * FROM projects 
             WHERE status = 'published'
             ORDER BY RANDOM() LIMIT 15
         ''')
         return {
             "Most Liked": [dict(row) for row in most_liked],
             "Most Pivoted": [dict(row) for row in most_pivoted],
-            "Most Remixed": [dict(row) for row in most_remixed],
             "Some other...": [dict(row) for row in random_projects],
         }
     finally:
@@ -61,6 +55,7 @@ def create_search(container):
                             with ui.card().classes('transition hover:shadow-lg hover:scale-[1.01]'):
                                 with ui.column().classes('p-4'):
                                     ui.label(proj['title']).classes('text-lg font-semibold')
+                                    ui.image(source=proj['svg_data']).classes('w-[200px] h-auto aspect-square')
                                     ui.label(f"👤 {proj['username']}").classes('text-sm text-gray-600')
     return handle_search
 
