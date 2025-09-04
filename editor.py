@@ -146,18 +146,13 @@ for i in range(100):
             logs.push(f"\n{stdout}\n")
             turtles = [v for v in safe_globals.values() if isinstance(v, Turtle)]
             img_data_list = []
-            img_farthest = []
             if turtles:
                 for turtle in turtles:
                     img_data_list.append(turtle._get_image_data()[0])
-                    img_farthest.append(turtle._get_image_data()[1])
             else:
                 return
             screen = safe_globals.get("SCREEN", {})
-            w_max = max([i[0] for i in img_farthest])
-            h_max = max([i[1] for i in img_farthest])
-            print(w_max, h_max)
-            geom: tuple = screen.get('geometry', (w_max, h_max))
+            geom: tuple = screen.get('geometry', (300, 300))
             bg = screen.get('bg', 'white')
             if len(geom) != 2:
                 logs.push("\n`GEOMETRY` in `SCREEN` must be a tuple of two elements ('width', 'height')!\n")
