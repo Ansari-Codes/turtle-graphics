@@ -15,17 +15,17 @@ DB_CONFIG = {
     'port': 7864,
 }
 
-# @app.on_startup
-# async def clear_db_on_start():
-#     try:
-#         conn = await asyncpg.connect(**DB_CONFIG)
-#         try:
-#             await conn.execute('TRUNCATE accounts, projects RESTART IDENTITY CASCADE')
-#             print("🧹 Database table cleared on startup.")
-#         finally:
-#             await conn.close()
-#     except Exception as e:
-#         print(f"❌ Database startup error: {e}")
+@app.on_startup
+async def clear_db_on_start():
+    try:
+        conn = await asyncpg.connect(**DB_CONFIG)
+        try:
+            await conn.execute('TRUNCATE accounts, projects RESTART IDENTITY CASCADE')
+            print("🧹 Database table cleared on startup.")
+        finally:
+            await conn.close()
+    except Exception as e:
+        print(f"❌ Database startup error: {e}")
 theme = {
     "primary": "#2B9644",
     "secondary": "#aaffaa",
