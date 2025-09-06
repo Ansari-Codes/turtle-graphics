@@ -3,3 +3,4 @@ plotly
 nicegui
 pillow
 aiosmtplib
+bcrypt
