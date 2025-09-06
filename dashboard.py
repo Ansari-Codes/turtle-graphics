@@ -11,6 +11,7 @@ def view_project(project_data, dialog):
     img = project_data.get('svg', '')
     created_at = project_data.get('created_at', '')
     status = project_data.get('status', 'draft')
+    
     if created_at:
         if isinstance(created_at, str):
             created_str = created_at[:10]
@@ -18,10 +19,11 @@ def view_project(project_data, dialog):
             created_str = created_at.strftime('%Y-%m-%d')
     else:
         created_str = 'Unknown'
+    
     with dialog.classes('w-full h-full flex-col'), ui.card().classes('w-full h-full flex flex-col rounded-xl shadow-2xl'):
         with ui.carousel(animated=True).classes('w-full h-full') as c:
             with ui.carousel_slide('Graphics').classes('w-full h-full'):
-                with ui.row().classes('rounded-lg p-2 m-0 bg-primary w-full'):
+                with ui.row().classes('rounded-lg p-2 m-0 bg-primary w-full flex-wrap'):
                     ui.label(title.__str__().capitalize()).classes('text-xl')
                     ui.badge(status, color='positive' if status=='published' else 'gray')
                     ui.space()
@@ -35,13 +37,13 @@ def view_project(project_data, dialog):
                         with ui.column().classes('items-center justify-center text-gray-400'):
                             ui.icon('image_not_supported').classes('text-4xl')
                             ui.label('No preview available')
-                with ui.row():
+                with ui.row().classes('justify-center'):
                     ui.button('Code', icon='navigate_next').\
                         on_click(c.next).\
                             props('push')
             with ui.carousel_slide('Code').classes('max-w-full max-h-full').\
                 props('control-color=primary'):
-                with ui.row().classes('rounded-lg p-2 m-0 bg-primary w-full'):
+                with ui.row().classes('rounded-lg p-2 m-0 bg-primary w-full flex-wrap'):
                     ui.label(title.__str__()).classes('text-xl')
                     ui.badge(status, color='positive' if status=='published' else 'gray')
                     ui.space()
@@ -49,10 +51,10 @@ def view_project(project_data, dialog):
                         .on_click(dialog.close).\
                             props('push color=negative')
                 ui.code(code).classes('w-full overflow-auto')
-                with ui.row().classes('justify-between mt-2 text-sm text-gray-500'):
+                with ui.row().classes('justify-between mt-2 text-sm text-gray-500 flex-wrap'):
                     ui.label(f"Lines: {len(code.splitlines())}")
                     ui.label(f"Characters: {len(code)}")
-                with ui.row():
+                with ui.row().classes('justify-center'):
                     ui.button('Output', icon='navigate_before').\
                         on_click(c.previous).\
                             props('push')
@@ -67,7 +69,6 @@ async def get_projects(limit=5, order_by="created_at"):
             code_data AS code, 
             svg_data AS svg, 
             pivot_count, 
-            remix_count, 
             created_at, 
             likes,
             description,
@@ -93,6 +94,7 @@ async def projector():
             step=1
         ).props('dense bordered')
     project_container = ui.scroll_area().classes("w-full h-[60vh] gap-4")
+    
     async def refresh_projects():
         order_by = "created_at"
         projects = await get_projects(limit_input.value, order_by)
@@ -102,76 +104,76 @@ async def projector():
                 with ui.card().classes(
                     'w-full p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-2'
                 ):
-                    with ui.column():
+                    with ui.column().classes('w-full md:w-auto'):
                         ui.label(p['title']).classes('text-lg font-semibold')
                         ui.label(f"Created: {p['created_at'][:10] if isinstance(p['created_at'], str) else p['created_at'].strftime('%Y-%m-%d')}").classes('text-sm text-gray-500')
-                    with ui.row().classes('gap-4 items-center'):
+                    with ui.row().classes('gap-4 items-center w-full md:w-auto justify-start md:justify-end'):
                         ui.badge(p['status']).props('color=primary')
                         ui.label(f"❤️ {p['likes']}")
                         ui.label(f"⬆️ {p['pivot_count']}")
+    
     limit_input.on('change', lambda _: refresh_projects())
     await refresh_projects()
     return project_container
 
 async def main():
     projects_data = await get_projects(limit=10000)  # Get all projects for stats
-    with ui.column().classes('w-full gap-6'):
-        with ui.row().classes('flex flex-col md:flex-row w-full gap-6'):
-            with ui.column().classes('w-full md:w-[40vw]'):
-                with ui.row().classes('flex flex-wrap gap-4 w-full'):
-                    with ui.card().classes('flex-1 min-w-[140px] p-4'):
-                        ui.label('Total Projects').classes('text-sm text-gray-500')
-                        ui.label(len(projects_data)).classes('text-2xl font-bold')# pyright: ignore[reportArgumentType]
-                    with ui.card().classes('flex-1 min-w-[140px] p-4'):
-                        ui.label('Total Likes').classes('text-sm text-gray-500')
-                        ui.label(sum(p['likes'] for p in projects_data)).classes('text-2xl font-bold')# pyright: ignore[reportArgumentType]
-                    with ui.card().classes('flex-1 min-w-[140px] p-4'):
-                        ui.label('Total Remixes').classes('text-sm text-gray-500')
-                        ui.label(sum(p['remix_count'] for p in projects_data)).classes('text-2xl font-bold')# pyright: ignore[reportArgumentType]
-                    with ui.card().classes('flex-1 min-w-[140px] p-4'):
-                        ui.label('Total Pivots').classes('text-sm text-gray-500')
-                        ui.label(sum(p['pivot_count'] for p in projects_data)).classes('text-2xl font-bold') # pyright: ignore[reportArgumentType]
-                await projector()
-            
-            with ui.column().classes('w-full md:w-[40vw]'):
-                with ui.row().classes('flex flex-col gap-6 w-full'):
-                    # Responsive container for charts
-                    with ui.element('div').classes('w-full max-w-full sm:max-w-[400px] md:max-w-none mx-auto'):
-                        pie_fig = go.Figure(
-                            data=[go.Pie(
-                                labels=['Draft', 'Published'],
-                                values=[
-                                    sum(1 for p in projects_data if p['status'] == 'draft'),
-                                    sum(1 for p in projects_data if p['status'] == 'published'),
-                                ],
-                            )]
-                        )
-                        pie_fig.update_layout(title='Project Status', margin=dict(l=20, r=20, t=40, b=20))
-                        ui.plotly(pie_fig).classes('w-full h-[300px] sm:h-[350px] md:h-[400px]')
-
-                    with ui.element('div').classes('w-full max-w-full sm:max-w-[400px] md:max-w-none mx-auto'):
-                        bar_fig = go.Figure(
-                            data=[go.Bar(
-                                x=[p['title'][:15] + '...' if len(p['title']) > 15 else p['title'] for p in projects_data[:10]],
-                                y=[p['likes'] for p in projects_data[:10]],
-                            )]
-                        )
-                        bar_fig.update_layout(title='Likes per Project (Top 10)', margin=dict(l=20, r=20, t=40, b=20))
-                        ui.plotly(bar_fig).classes('w-full h-[300px] sm:h-[350px] md:h-[400px]')
+    with ui.row().classes('flex flex-col lg:flex-row w-full'):
+        with ui.column().classes('w-full lg:w-[30vw]'):
+            with ui.row().classes('flex flex-wrap gap-4 w-full justify-center md:justify-start'):
+                with ui.card().classes('flex-1 min-w-[140px] p-4'):
+                    ui.label('Total Projects').classes('text-sm text-gray-500')
+                    ui.label(len(projects_data)).classes('text-2xl font-bold') # type: ignore
+                with ui.card().classes('flex-1 min-w-[140px] p-4'):
+                    ui.label('Total Likes').classes('text-sm text-gray-500')
+                    ui.label(sum(p['likes'] for p in projects_data)).classes('text-2xl font-bold') # type: ignore
+                with ui.card().classes('flex-1 min-w-[140px] p-4'):
+                    ui.label('Total Pivots').classes('text-sm text-gray-500')
+                    ui.label(sum(p['pivot_count'] for p in projects_data)).classes('text-2xl font-bold') # type: ignore
+            await projector()
+        
+        with ui.column().classes('w-full lg:w-[40vw]'):
+            with ui.row().classes('flex flex-col gap-6 w-full'):
+                # Responsive container for charts
+                with ui.element('div').classes('w-full max-w-full mx-auto'):
+                    pie_fig = go.Figure(
+                        data=[go.Pie(
+                            labels=['Draft', 'Published'],
+                            values=[
+                                sum(1 for p in projects_data if p['status'] == 'draft'),
+                                sum(1 for p in projects_data if p['status'] == 'published'),
+                            ],
+                        )]
+                    )
+                    pie_fig.update_layout(title='Project Status', margin=dict(l=20, r=20, t=40, b=20))
+                    ui.plotly(pie_fig).classes('w-full h-[300px] sm:h-[350px] md:h-[400px]')
+                with ui.element('div').classes('w-full max-w-full mx-auto'):
+                    bar_fig = go.Figure(
+                        data=[go.Bar(
+                            x=[p['title'][:15] + '...' if len(p['title']) > 15 else p['title'] for p in projects_data[:10]],
+                            y=[p['likes'] for p in projects_data[:10]],
+                        )]
+                    )
+                    bar_fig.update_layout(title='Likes per Project (Top 10)', margin=dict(l=20, r=20, t=40, b=20))
+                    ui.plotly(bar_fig).classes('w-full h-[300px] sm:h-[350px] md:h-[400px]')
 
 async def projects_page(dialog, max_proj=3):
     all_projects = await get_projects(limit=1000)
-    # Use direct on_change param for all filters
+    with ui.dialog() as d, ui.card():
+        title = ui.input('Name').props('dense outlined')
+        username = app.storage.user.get('username')
+        ui.button('Create', on_click=lambda : ui.navigate.to(f'/{username}/dashboard/new/{title.value.strip().lower()}'))
+    
     def update_content(*_):
         show_content(1, search_input.value, status_filter.value, order_filter.value) # type: ignore
-
-    with ui.row().classes('w-full items-center'):
+    
+    with ui.row().classes('w-full items-center flex-wrap gap-2'):
         search_input = ui.input(
             placeholder='Search projects...',
             on_change=lambda e: update_content()
-        ).classes('rounded text-sm').props('outlined dense')
-        with ui.button(icon='filter'):
-            with ui.menu().classes('w-full sm:w-[20vw] bg-green-100') as m:
+        ).classes('rounded text-sm flex-grow').props('outlined dense')
+        with ui.button(icon='filter_alt'):
+            with ui.menu().classes('w-full sm:w-[20vw] bg-green-100 p-4') as m:
                 status_filter = ui.select(
                     ['All', 'Draft', 'Published'],
                     value='All',
@@ -184,9 +186,11 @@ async def projects_page(dialog, max_proj=3):
                     label='Order',
                     on_change=lambda e: update_content()
                 ).classes('mb-1 w-full')
+        ui.button('New', icon='add', on_click=d.open)
+            
     cont = ui.row().classes('w-full justify-start flex-wrap gap-4 mt-4')
     pagination_container = ui.row().classes('w-full justify-center mt-4')
-
+    
     def show_content(page, search_text='', status='All', order='Descending'):
         cont.clear()
         pagination_container.clear()
@@ -199,10 +203,12 @@ async def projects_page(dialog, max_proj=3):
             filtered = sorted(filtered, key=lambda x: x.get('created_at', ''), reverse=False)
         else:
             filtered = sorted(filtered, key=lambda x: x.get('created_at', ''), reverse=True)
+        
         filtered_total = len(filtered)
         filtered_pages = max(1, (filtered_total + max_proj - 1) // max_proj)
         start = (page-1) * max_proj
         end = min(page * max_proj, filtered_total)
+        
         with cont:
             for row in filtered[start:end]:
                 created = row['created_at']
@@ -210,6 +216,7 @@ async def projects_page(dialog, max_proj=3):
                     created_str = created.strftime("%b %d, %Y")
                 else:
                     created_str = str(created)
+                
                 with ui.card().classes('w-full sm:w-[300px] h-fit p-4 shadow-md hover:shadow-lg transition'):
                     ui.label(row['title']).classes('font-bold text-lg mb-2')
                     if row['svg']:
@@ -221,7 +228,8 @@ async def projects_page(dialog, max_proj=3):
                         ui.label(f"🔄 {row['pivot_count']} pivots")
                     ui.label(f"📅 {created_str} --- {row['status']}").classes('text-gray-500 text-sm mb-2')
                     ui.button('View Project', on_click=lambda r=row: view_project(r, dialog)) \
-                        .props('color=secondary outline rounded')
+                        .props('color=accent outline rounded')
+        
         with pagination_container:
             ui.pagination(
                 value=page,
@@ -235,6 +243,7 @@ async def projects_page(dialog, max_proj=3):
                     order_filter.value # type: ignore
                 )
             ).classes('w-full')
+    
     show_content(1, '', 'All', 'Ascending')
 
 async def create_dashboard(theme, style, props, user):
@@ -280,14 +289,16 @@ async def create_dashboard(theme, style, props, user):
             ]
             ui.toggle(options, value='Dashboard',
                 on_change=lambda e: switch_panel(e.value)).classes('flex-col shadow-none bg-none text-sm w-full') \
-                .props('push color=secondary toggle-color=dark text-color=accent',
-                )
+                .props('push color=secondary toggle-color=dark text-color=accent')
+    
     with ui.column().classes('w-full m-0 p-0'):
         with ui.row().classes('w-full h-[60px] rounded-t-2xl bg-primary items-center px-3 justify-between m-0 p-0 flex-nowrap'):
             ui.button(on_click=drawer.toggle, icon='sym_s_side_navigation').props('push rounded size=sm')
             panel_label = ui.label('Dashboard').classes('text-white text-lg font-bold sm:text-xl truncate')
             ui.label('@' + app.storage.user.get('username','')).classes('text-white text-base font-bold sm:text-xl truncate')
+        
         content_container = ui.column().classes('w-full m-0 p-0')
+        
         async def switch_panel(panel_name):
             panel_label.set_text(panel_name)
             content_container.clear()
@@ -296,4 +307,5 @@ async def create_dashboard(theme, style, props, user):
                     await main()
                 elif panel_name == 'Projects':
                     await projects_page(dialog)
+        
         await switch_panel('Dashboard')
