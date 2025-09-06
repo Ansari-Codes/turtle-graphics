@@ -90,4 +90,4 @@ def create_login():
     print(f"Loaded Login")
 
 secret = '123-asdf-2134-sadf-234-sadf-324-sadf-324-sdf-435-sfda-4'
-ui.run(storage_secret=secret, title='Turtle Graphics', reload=True, host='0.0.0.0', port=8080)
+ui.run(storage_secret=secret, title='Turtle Graphics', reload=False, host='0.0.0.0', port=8080)
