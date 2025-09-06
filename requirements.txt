@@ -4,3 +4,4 @@ nicegui
 pillow
 aiosmtplib
 bcrypt
+numpy
