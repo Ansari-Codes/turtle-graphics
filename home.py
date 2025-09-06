@@ -72,8 +72,9 @@ def toggle_visibility():
     ''')
 
 async def navigate():
+    import uuid
     async def nav():
-        ui.navigate.to(f"/{app.storage.user.get('username')}/dashboard/new")
+        ui.navigate.to(f"/{app.storage.user.get('username')}/dashboard/new/{uuid.uuid1().hex[:8]}")
     async def nav2():
         ui.navigate.to("/login")
     if app.storage.user.get('auth'):
