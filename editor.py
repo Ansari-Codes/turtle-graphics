@@ -158,7 +158,7 @@ for i in range(100):
                 logs.push("\n`GEOMETRY` in `SCREEN` must be a tuple of two elements ('width', 'height')!\n")
                 return
             width, height = geom[0], geom[1]
-            if (width > 6000 or width < 100) or (height > 6000 or height < 100):
+            if (width > 1000 or width < 100) or (height > 1000 or height < 100):
                 logs.push('Width or Height specified in `SCREEN` must be greater than 100 but less than or equal to 6000.')
                 return
             canvas.set_content(f'''
