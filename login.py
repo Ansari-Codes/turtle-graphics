@@ -24,8 +24,10 @@ async def get_username_from_credentials(identifier: str, password: str) -> str |
     """
     row = await conn.fetchrow(query, identifier)
     if row:
-        hashed = row['pswd'].encode('utf-8')  # stored hashed password
-        if bcrypt.checkpw(password.encode('utf-8'), hashed):
+        stored_hash = row['pswd']
+        if isinstance(stored_hash, str):
+            stored_hash = stored_hash.encode('utf-8')
+        if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
             return row['username']
     return None
 
