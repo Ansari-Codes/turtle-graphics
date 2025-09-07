@@ -96,8 +96,5 @@ print(os.environ.get("PORT", 8080))
 print("@run")
 ui.run(
     storage_secret=secret,
-    title='Turtle Graphics',
-    reload=False,
-    host='0.0.0.0',
-    port=int(os.environ.get("PORT", 8080))
+    title='Turtle Graphics'
 )
