@@ -1,12 +1,7 @@
 import asyncpg
-
-DB_CONFIG = {
-    'user': 'postgres',
-    'password': 'postgres@app',
-    'database': 'users',
-    'host': 'localhost',
-    'port': 7864,
-}
-
+import os
+database_url = os.environ.get('DATABASE_URL')
 async def get_db_conn():
-    return await asyncpg.connect(**DB_CONFIG)
+    if not database_url:
+        raise ValueError("Cannot find database url")
+    return await asyncpg.connect(database_url)
