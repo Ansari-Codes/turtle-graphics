@@ -8,18 +8,10 @@ from dashboard import create_dashboard as cd
 import asyncpg, asyncio
 import os
 
-DB_CONFIG = {
-    'user': 'postgres',
-    'password': 'postgres@app',
-    'database': 'users',
-    'host': 'localhost',
-    'port': 7864,
-}
-
 @app.on_startup
 async def clear_db_on_start():
     try:
-        conn = await asyncpg.connect(**DB_CONFIG)
+        conn = await asyncpg.connect(os.environ.get('DATABASE_URL'))
         try:
             await conn.execute('TRUNCATE accounts, projects RESTART IDENTITY CASCADE')
             print("🧹 Database table cleared on startup.")
