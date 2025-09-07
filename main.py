@@ -9,16 +9,47 @@ import asyncpg, asyncio
 import os
 
 @app.on_startup
-async def clear_db_on_start():
+async def setup_db():
     try:
-        conn = await asyncpg.connect(os.environ.get('DATABASE_URL'))
+        conn = await asyncpg.connect(os.environ["DATABASE_URL"])
         try:
-            await conn.execute('TRUNCATE accounts, projects RESTART IDENTITY CASCADE')
-            print("🧹 Database table cleared on startup.")
+            # 1. Create accounts table if not exists
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS accounts (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT,
+                    mail TEXT,
+                    pswd TEXT
+                )
+            """)
+
+            # 2. Create projects table if not exists
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS projects (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
+                    title VARCHAR(100) NOT NULL,
+                    svg_data TEXT,
+                    code_data TEXT,
+                    likes INTEGER DEFAULT 0,
+                    pivot_count INTEGER DEFAULT 0,
+                    created_at TIMESTAMPTZ DEFAULT now(),
+                    username TEXT,
+                    description TEXT,
+                    status TEXT
+                )
+            """)
+
+            # 3. Clear both tables (reset identity)
+            await conn.execute("TRUNCATE accounts, projects RESTART IDENTITY CASCADE")
+            print("🧹 Database tables created (if missing) and cleared on startup.")
+
         finally:
             await conn.close()
+
     except Exception as e:
         print(f"❌ Database startup error: {e}")
+
 print("App passed...")
 theme = {
     "primary": "#2B9644",
