@@ -8,7 +8,7 @@ from contextlib import contextmanager
 import html
 
 class Turtle:
-    def __init__(self, width=5000, height=5000, supersample=2):
+    def __init__(self, width=400, height=400, supersample=2):
         self.supersample = supersample
         self.width = width
         self.height = height
