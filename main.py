@@ -115,9 +115,12 @@ def create_login():
     print(f"Loaded Login")
 
 secret = '123-asdf-2134-sadf-234-sadf-324-sadf-324-sdf-435-sfda-4'
-print(os.environ.get("PORT", 8080))
+port = int(os.environ.get("PORT", 8080))
+print(port)
 print("@run")
 ui.run(
     storage_secret=secret,
-    title='Turtle Graphics'
+    title='Turtle Graphics',
+    host='0.0.0.0',
+    port=port
 )
