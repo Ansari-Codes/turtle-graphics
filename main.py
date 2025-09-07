@@ -6,6 +6,7 @@ from login import create_login as cl
 from editor import create_new as cn
 from dashboard import create_dashboard as cd
 import asyncpg, asyncio
+import os
 
 DB_CONFIG = {
     'user': 'postgres',
@@ -26,6 +27,7 @@ async def clear_db_on_start():
             await conn.close()
     except Exception as e:
         print(f"❌ Database startup error: {e}")
+print("App passed...")
 theme = {
     "primary": "#2B9644",
     "secondary": "#aaffaa",
@@ -90,7 +92,8 @@ def create_login():
     print(f"Loaded Login")
 
 secret = '123-asdf-2134-sadf-234-sadf-324-sadf-324-sdf-435-sfda-4'
-import os
+print(os.environ.get("PORT", 8080))
+print("@run")
 ui.run(
     storage_secret=secret,
     title='Turtle Graphics',
