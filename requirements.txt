@@ -1,6 +1,6 @@
 asyncpg
 plotly
-nicegui==0.7.15
+nicegui==2.20.0
 pillow
 aiosmtplib
 bcrypt
